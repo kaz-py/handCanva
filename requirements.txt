@@ -1,0 +1,6 @@
+# mediapipe moderno (probado 1.1.1) ya NO trae mp.solutions: se usa la API Tasks (HandLandmarker).
+# El modelo hand_landmarker.task (~7 MB) se descarga solo la primera vez a ./models/.
+opencv-python
+mediapipe
+numpy
+pytest

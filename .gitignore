@@ -1,0 +1,16 @@
+# Claude / agentes
+.claude/
+.agents/
+skills-lock.json
+CLAUDE.md
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Generado en local
+models/
+calibracion.json
+*.avi
+*.mp4
