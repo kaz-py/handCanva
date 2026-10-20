@@ -24,7 +24,7 @@ python main.py
 
 | Opción | Efecto |
 |---|---|
-| `--debug` | Muestra modo, puntero, botón bajo el puntero, dwell, ratios de dedos y una miniatura de la cámara |
+| `--debug` | Muestra modo estable y candidato, puntero, botón bajo el puntero, dwell, distancia índice-pulgar (`pd`), ratios y ángulos por dedo y una miniatura de la cámara |
 | `--fullscreen` | Pantalla completa (también con la tecla `F`) |
 | `--source N` | Cámara número N, o ruta a un vídeo |
 | `--reach 0.8` | Fracción central de la cámara que cubre toda la pantalla (menor = más sensible) |
@@ -46,12 +46,12 @@ mantenla ~0,8 s: el anillo de progreso se completa y se confirma. También puede
 instante pellizcando pulgar e índice sobre el botón.
 
 ### Dibujar con el pincel (solo el índice)
-Solo el índice arriba: pinta con el color y el grosor activos.
+Solo el índice arriba: pinta con el color y el grosor activos. Si pellizcas pulgar e índice con el pincel, el lápiz se levanta (no pinta).
 
 ### Dibujar figuras (línea, rectángulo, círculo)
 Elige la herramienta y mueve el índice: el puntero se mueve sin pintar. **Toca la punta del índice con
 la del pulgar** para fijar el punto de partida; mientras mantengas el pellizco y muevas la mano verás
-la vista previa, y al soltar la figura queda dibujada. Sobre un botón, el pellizco sigue siendo un clic.
+la vista previa, y al soltar la figura queda dibujada. Sobre un botón, el pellizco sigue siendo un clic. Si pierdes la mano a mitad de figura, se descarta.
 
 ### Borrar (mano completamente cerrada)
 Puño cerrado, pulgar incluido: borra solo bajo el puño. Con el índice solo o con dos dedos no borra.
@@ -70,7 +70,7 @@ Para vaciar la pizarra usa el botón **Limpiar** (no hay gesto de mano para eso)
 | Bandeja de marcadores | Elige el color: rojo, verde, azul, amarillo o negro |
 | Borrador de fieltro | Herramienta de borrado |
 | Imanes redondos | Pincel, línea, rectángulo, círculo, y grosor − / + |
-| Deshacer | Quita el último trazo |
+| Deshacer | Quita el último trazo (si dos manos dibujaron a la vez solapadas, se deshacen juntos) |
 | Limpiar | Vacía toda la pizarra |
 
 ## Calibrar (recomendado en el stand)
