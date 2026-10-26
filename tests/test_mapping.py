@@ -1,4 +1,4 @@
-"""Mapeo landmark -> px de pantalla: coordenadas directas (sin espejo), zona activa, clamp, suavizado, esqueleto = puntero."""
+"""Mapeo landmark -> px de pantalla: movimiento natural, zona activa, clamp, suavizado, esqueleto = puntero."""
 import json
 import os
 import sys
@@ -24,18 +24,18 @@ def at(x, y, up=(1, 0, 0, 0)):
 
 
 @pytest.mark.parametrize("w,h", SIZES)
-def test_direct_mapping_no_mirror(w, h):
-    t = GestureTracker(w, h)                              # zona FULL: (x*W, y*H), sin espejo ni inversión
+def test_natural_mapping(w, h):
+    t = GestureTracker(w, h)                              # zona FULL: la mano y el puntero se mueven en la misma dirección
     _, ptr, _ = t.update(at(0.25, 0.5))
-    assert ptr == (round(0.25 * w), round(0.5 * h))
+    assert ptr == (round(0.75 * w), round(0.5 * h))
     assert t.hands[0][8] == ptr                           # el esqueleto usa el mismo mapeo
 
 
 @pytest.mark.parametrize("w,h", SIZES)
 def test_zone_edges_hit_screen_corners_and_clamp(w, h):
     x0, y0, x1, y1 = ZONE
-    for (x, y), exp in [((x0, y0), (0, 0)), ((x1, y1), (w - 1, h - 1)),
-                        ((-0.1, 1.2), (0, h - 1)), ((1.3, -0.2), (w - 1, 0)),    # extrapolados fuera de [0,1]
+    for (x, y), exp in [((x0, y0), (w - 1, 0)), ((x1, y1), (0, h - 1)),
+                        ((-0.1, 1.2), (w - 1, h - 1)), ((1.3, -0.2), (0, 0)),    # extrapolados fuera de [0,1]
                         (((x0 + x1) / 2, (y0 + y1) / 2), (round(w / 2), round(h / 2)))]:
         t = GestureTracker(w, h, zone=ZONE)
         assert t.update(at(x, y))[1] == exp, (x, y)
@@ -45,7 +45,7 @@ def test_zone_mapping_continuous_and_monotonic():
     t = GestureTracker(1280, 720, zone=ZONE)
     xs = np.linspace(-0.2, 1.2, 701)
     px = t._px(np.c_[xs, np.full_like(xs, 0.5)])[:, 0]
-    assert np.all(np.diff(px) >= 0)
+    assert np.all(np.diff(px) <= 0)
     assert np.diff(px).max() <= (xs[1] - xs[0]) / (ZONE[2] - ZONE[0]) * 1280 + 1e-9   # sin saltos
 
 
@@ -57,7 +57,7 @@ def test_every_button_reachable_and_clickable_with_zone(w, h):
     frame = np.zeros((h, w, 3), np.uint8)
     for bid, e in app.overlay._el.items():
         cx, cy = e["center"]
-        nx, ny = x0 + (cx + 0.25) / w * (x1 - x0), y0 + (cy + 0.25) / h * (y1 - y0)
+        nx, ny = x1 - (cx + 0.25) / w * (x1 - x0), y0 + (cy + 0.25) / h * (y1 - y0)
         assert x0 <= nx <= x1 and y0 <= ny <= y1
         for i in range(4):                                # soltar la mano: reinicia puntero y dwell
             app.step(frame, None, i / 30)
@@ -83,7 +83,8 @@ def test_adaptive_filter_less_lag_and_still_smooth():
     t = GestureTracker(1280, 720)
     for i in range(30):                                   # 15 px/frame constantes (~450 px/s a 30 FPS)
         p = t.update(at(0.2 + i * 15 / 1280, 0.5))[1]
-    lag = (0.2 + 29 * 15 / 1280) * 1280 - p[0]
+    target = (1 - (0.2 + 29 * 15 / 1280)) * 1280
+    lag = p[0] - target
     assert lag < 0.6 * 15                                 # el EMA fijo 0.5 de antes iba 1 frame (15 px) detrás
     rng = np.random.default_rng(0)
     t = GestureTracker(1280, 720)
@@ -136,7 +137,7 @@ DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "pointin
 
 @pytest.mark.skipif(not os.path.exists(DATA), reason="falta la foto de prueba")
 def test_real_hand_photo_pointer_on_fingertip():
-    """Extremo a extremo con MediaPipe real: mano a la izquierda de la imagen -> izquierda de la pantalla."""
+    """Extremo a extremo con MediaPipe real: mano a la izquierda de la imagen -> derecha de la pantalla."""
     pytest.importorskip("mediapipe")
     from gestures import MODEL_PATH, HandDetector
     if not os.path.exists(MODEL_PATH):
@@ -156,7 +157,8 @@ def test_real_hand_photo_pointer_on_fingertip():
         main.App.step = real
     app = out["app"]
     assert app.ui.mode == "DIBUJANDO" and len(app.ui.hands) == 1
-    assert np.hypot(*(np.array(app.ui.pointer) - tip)) < 20
+    expected = np.array([1280 - tip[0], tip[1]])
+    assert np.hypot(*(np.array(app.ui.pointer) - expected)) < 20
     assert app.ui.hands[0][8] == app.ui.pointer
 
 
@@ -164,7 +166,7 @@ def test_calibration_recovers_zone_consistent_with_app_mapping():
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
     from calibrar import TARGETS, zone_from_points
     zx0, zy0, zx1, zy1 = 0.15, 0.1, 0.8, 0.82
-    raw = [(zx0 + sx * (zx1 - zx0), zy0 + sy * (zy1 - zy0)) for sx, sy in TARGETS]   # inversa del mapeo
+    raw = [(zx1 - sx * (zx1 - zx0), zy0 + sy * (zy1 - zy0)) for sx, sy in TARGETS]   # inversa del mapeo
     z, err = zone_from_points(raw)
     assert z == pytest.approx((zx0, zy0, zx1, zy1)) and err == pytest.approx(0, abs=1e-9)
     for (sx, sy), (x, y) in zip(TARGETS, raw):            # con esa zona, la app pone el puntero sobre cada objetivo

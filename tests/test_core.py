@@ -55,7 +55,7 @@ def test_hysteresis_and_ema():
     p0 = t.update(d)[1]
     d2 = d.copy(); d2[8, 0] += 0.2
     p1 = t.update(d2)[1]
-    assert p0[0] < p1[0] < p0[0] + 200                        # suavizado: no salta entero
+    assert p0[0] - 200 < p1[0] < p0[0]                        # suavizado: no salta entero
 
 
 def test_dwell():

@@ -17,7 +17,7 @@ W, H = 1280, 720
 
 def select_at(x, y):
     h = hand((1, 1, 0, 0))
-    h[:, 0] += x / W - h[8, 0]; h[:, 1] += y / H - h[8, 1]   # traslada la mano entera
+    h[:, 0] += (1 - x / W) - h[8, 0]; h[:, 1] += y / H - h[8, 1]   # traslada la mano entera
     return h
 
 

@@ -109,13 +109,13 @@ def test_rect_from_anchor_on_pinch_release():
     st = app.canvas._strokes[0]
     anchor = st.start
     assert anchor == app.tracker.slots[0].pointer or abs(anchor[0] - app.tracker.slots[0].pointer[0]) < 6
-    _drive(app, f, 14, lambda i: pinch_hand(0.30 + 0.025 * i, 0.45 + 0.01 * i, True), 1.0)
+    _drive(app, f, 14, lambda i: pinch_hand(0.30 - 0.025 * i, 0.45 + 0.01 * i, True), 1.0)
     end = app.canvas._strokes[0].last
     assert not app.canvas.mask.any()                                    # solo vista previa mientras se mantiene
-    _drive(app, f, 4, lambda i: pinch_hand(0.30 + 0.025 * 13, 0.45 + 0.01 * 13, False), 2.0)
+    _drive(app, f, 4, lambda i: pinch_hand(0.30 - 0.025 * 13, 0.45 + 0.01 * 13, False), 2.0)
     m = app.canvas.mask
     assert m[anchor[1], anchor[0]] > 0 and m[end[1], end[0]] > 0 and m[anchor[1], end[0]] > 0 and m[end[1], anchor[0]] > 0
-    assert end[0] > anchor[0] + 50 and end[1] > anchor[1]
+    assert end[0] < anchor[0] - 50 and end[1] > anchor[1]
 
 
 def test_pinch_on_button_clicks_and_does_not_draw():
@@ -132,10 +132,10 @@ def test_pinch_on_button_clicks_and_does_not_draw():
     assert app.ui.mode == "DIBUJANDO"
     app2 = main.App(640, 360)
     app2.ui.tool = "rect"
-    ptr_dx = cx - app.tracker.slots[0].pointer[0] / 640
+    ptr_dx = (1 - cx) - app.tracker.slots[0].pointer[0] / 640
     ptr_dy = cy - app.tracker.slots[0].pointer[1] / 360
-    _drive(app2, f, 10, lambda i: pinch_hand(cx - 0.0 + ptr_dx + 0.0, cy - 0.12 + ptr_dy, False))
-    _drive(app2, f, 6, lambda i: pinch_hand(cx + ptr_dx, cy - 0.12 + ptr_dy, True), 1.0)
+    _drive(app2, f, 10, lambda i: pinch_hand((1 - cx) + ptr_dx, cy - 0.12 + ptr_dy, False))
+    _drive(app2, f, 6, lambda i: pinch_hand((1 - cx) + ptr_dx, cy - 0.12 + ptr_dy, True), 1.0)
     assert app2.hcol[0] == "green" and not app2.canvas.mask.any() and not any(app2.shape_on) and app2.cur == {}
 
 
@@ -179,7 +179,7 @@ def test_color_assigned_to_hand_that_chose_it_and_other_keeps_drawing():
     for i in range(60):
         h0 = shifted(0.0 + 0.004 * i)
         h1 = hand((1, 1, 0, 0))
-        h1[:, 0] += cx - h1[8, 0]; h1[:, 1] += cy - h1[8, 1]
+        h1[:, 0] += (1 - cx) - h1[8, 0]; h1[:, 1] += cy - h1[8, 1]
         app.step(f, [h0, h1], i / 30)
     assert app.hcol == ["red", "blue"]
     assert app.ui.color == "red"                       # la mano 0 conserva su color

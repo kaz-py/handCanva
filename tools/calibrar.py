@@ -1,6 +1,6 @@
 """Calibración del alcance: toca (con la punta del índice) 4 esquinas + centro de la pantalla.
 
-Calcula la zona activa de la cámara (coordenadas directas, sin espejo, como main.py) que cubre toda
+Calcula la zona activa de la cámara que cubre toda
 la pantalla y la guarda en calibracion.json. Después queda en modo verificación: objetivos + puntero
 ya calibrado (mismo mapeo que la app) para comprobar la alineación a ojo.
 
@@ -32,14 +32,22 @@ HOLD, STILL = 20, 0.006                           # frames quietos (~0.7 s) y to
 
 def zone_from_points(raw):
     """raw: 5 puntas del índice (x, y) normalizadas de la cámara para TARGETS -> (zona, error del centro en fracción).
-    Pantalla: sx = (x - x0)/(x1 - x0), sy = (y - y0)/(y1 - y0); los objetivos están en M y 1-M."""
+    El eje X puede llegar invertido desde la cámara; la zona siempre se devuelve ordenada."""
     tl, tr, br, bl, c = (np.asarray(p, float) for p in raw)
     gx = ((tr[0] + br[0]) - (tl[0] + bl[0])) / 2 / (1 - 2 * M)      # x1 - x0
     gy = ((bl[1] + br[1]) - (tl[1] + tr[1])) / 2 / (1 - 2 * M)      # y1 - y0
-    x0 = (tl[0] + bl[0]) / 2 - M * gx
+    if gx >= 0:
+        x0 = (tl[0] + bl[0]) / 2 - M * gx
+        x1 = x0 + gx
+        sx_c = (c[0] - x0) / gx
+    else:
+        width = -gx
+        x1 = (tl[0] + bl[0]) / 2 + M * width
+        x0 = x1 - width
+        sx_c = (x1 - c[0]) / width
     y0 = (tl[1] + tr[1]) / 2 - M * gy
-    z = (max(0.0, x0), max(0.0, y0), min(1.0, x0 + gx), min(1.0, y0 + gy))
-    err = np.hypot((c[0] - z[0]) / (z[2] - z[0]) - 0.5, (c[1] - z[1]) / (z[3] - z[1]) - 0.5)
+    z = (max(0.0, x0), max(0.0, y0), min(1.0, x1), min(1.0, y0 + gy))
+    err = np.hypot(sx_c - 0.5, (c[1] - z[1]) / (z[3] - z[1]) - 0.5)
     return z, float(err)
 
 

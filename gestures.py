@@ -136,9 +136,10 @@ class GestureTracker:
     def _px(self, p):
         # zona activa de la cámara -> pantalla entera (ganancia lineal); fuera de la zona, o landmarks
         # extrapolados fuera de [0,1] con la mano en el borde, se recortan al borde de la pantalla
-        # coordenadas directas de la cámara, sin espejo ni inversión: x = u*W, y = v*H
+        # La cámara entrega el eje horizontal invertido respecto al movimiento natural: x = (1-u)*W.
         x0, y0, x1, y1 = self.zone
         u = (np.asarray(p, np.float64)[..., :2] - (x0, y0)) / (x1 - x0, y1 - y0)
+        u[..., 0] = 1.0 - u[..., 0]
         return np.clip(u * (self.w, self.h), 0.0, (self.w - 1.0, self.h - 1.0))   # un punto (2,) o una mano (21, 2)
 
     def _smooth(self, old, new):

@@ -82,8 +82,8 @@ python tools/calibrar.py
 En tu posición habitual, lleva el índice a cada objetivo (cuatro esquinas y centro) y mantenlo quieto
 ~1 s. Se guarda `calibracion.json`, que `main.py` carga al iniciar. Sin calibración usa un rectángulo por defecto.
 
-Las coordenadas son las de la cámara tal cual, **sin espejo**: si mueves la mano a tu derecha, el
-puntero va a la izquierda de la pantalla. Si tu webcam ya entrega la imagen espejada, será al contrario.
+El puntero sigue el movimiento natural de la mano: si mueves la mano a tu derecha, va a la derecha
+de la pantalla. La imagen de la cámara no se muestra ni se voltea.
 
 ## Solución de problemas
 

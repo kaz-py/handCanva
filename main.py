@@ -240,7 +240,7 @@ def run(cap, detector, display=True, max_frames=None, fullscreen=False, debug=Fa
         ok, cam = cap.read()
         if not ok:
             break
-        h, w = cam.shape[:2]   # sin espejo: la cámara solo se usa para detectar, con sus coordenadas tal cual
+        h, w = cam.shape[:2]   # la cámara solo se usa para detectar; la salida es la pizarra
         if app is None or (w, h) != (app.w, app.h):
             ui = app.ui if app else None
             app = App(w, h, debug, zone)
