@@ -12,11 +12,11 @@ import numpy as np
 
 import theme as T
 from canvas import Canvas
-from gestures import PINCH_ON, DRAW, ERASE, FULL, IDLE, LINE, SELECT, ZONE, Dwell, GestureTracker
+from gestures import PINCH_ON, DRAW, FULL, IDLE, LINE, SELECT, ZONE, Dwell, GestureTracker
 from ui_overlay import Overlay, UIState
 
-MODE_NAMES = {DRAW: "DIBUJANDO", SELECT: "SELECCIÓN", ERASE: "BORRANDO", LINE: "DOS MANOS: LÍNEA"}
-DWELL_S, GRACE_S, ZONE_PAD, ERASE_R, DET_W, HELP_S = 0.8, 0.15, 0.10, 40, 640, 6.0   # detección sobre frame reducido: landmarks son normalizados
+MODE_NAMES = {DRAW: "DIBUJANDO", SELECT: "SELECCIÓN", LINE: "DOS MANOS: LÍNEA"}
+DWELL_S, GRACE_S, ZONE_PAD, DET_W, HELP_S = 0.8, 0.15, 0.10, 640, 6.0   # detección sobre frame reducido: landmarks son normalizados
 SHAPES = ("line", "rect", "circle")
 WIN = "handCanva"
 CALIB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "calibracion.json")   # lo escribe tools/calibrar.py
@@ -83,8 +83,6 @@ class App:
         ui = self.ui
         if mode == DRAW:
             return ui.tool, ui.thickness * self.s
-        if mode == ERASE:                      # borrador local: radio 40 px escalado; el canvas pinta t*3 de ancho
-            return "eraser", 2 * ERASE_R * self.s / 3
         return None
 
     def _sync_strokes(self, want, drop=()):
@@ -124,7 +122,7 @@ class App:
             s = tr.slots[i]
             ptr = s.pointer if s.active else None
             hv = None
-            if ptr and s.mode != ERASE and (s.mode == SELECT or s.pinch):
+            if ptr and (s.mode == SELECT or s.pinch):
                 hv = self._hover(ptr, self.dwells[i])
             hover[i] = hv
             rise[i] = bool(s.active and s.pinch and not self.prev_pinch[i])

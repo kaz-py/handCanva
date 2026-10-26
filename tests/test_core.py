@@ -5,7 +5,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from canvas import Canvas  # noqa: E402
-from gestures import DRAW, ERASE, IDLE, SELECT, Dwell, GestureTracker, classify, is_pinch  # noqa: E402
+from gestures import DRAW, IDLE, SELECT, Dwell, GestureTracker, classify, is_pinch  # noqa: E402
 
 
 def hand(up=(0, 0, 0, 0), pinch=False, thumb=False):
@@ -29,8 +29,8 @@ def hand(up=(0, 0, 0, 0), pinch=False, thumb=False):
 def test_classify():
     assert classify(hand((1, 1, 0, 0))) == SELECT
     assert classify(hand((1, 0, 0, 0))) == DRAW
-    assert classify(hand((0, 0, 0, 0))) == ERASE
-    assert classify(hand((0, 0, 0, 0), thumb=True)) == IDLE      # pulgar fuera: no es puño cerrado
+    assert classify(hand((0, 0, 0, 0))) == IDLE                  # puño: sin acción
+    assert classify(hand((0, 0, 0, 0), thumb=True)) == IDLE
     assert classify(hand((1, 1, 1, 1))) == IDLE
     assert classify(hand((0, 1, 0, 0))) == IDLE
 
@@ -103,20 +103,11 @@ def test_undo_bounded_and_eraser():
     assert not c.mask[5:11, 5].any()
 
 
-def test_no_erase_from_index_or_two_fingers():
-    for up in ((1, 0, 0, 0), (1, 1, 0, 0)):
-        t = GestureTracker(1000, 1000)
-        for _ in range(10):
-            t.update(hand(up))
-        assert t.mode != ERASE
-
-
-def test_fist_erases_at_palm_center():
+def test_fist_is_idle_and_keeps_pointer():
     t = GestureTracker(1000, 1000)
-    for _ in range(8):
+    for _ in range(10):
         t.update(hand((0, 0, 0, 0)))
-    assert t.mode == ERASE
-    assert abs(t.pointer[1] - 600) < 5            # nudillos en y=0.6
+    assert t.mode == IDLE and not t.pinch and t.pointer is not None
 
 
 def shifted(dx, up=(1, 0, 0, 0)):
@@ -140,7 +131,7 @@ def index_ratio(r):
     return h
 
 
-def test_drawing_with_foreshortened_index_never_erases():
+def test_drawing_with_foreshortened_index_stays_drawing_or_idle():
     rng = np.random.default_rng(0)
     t = GestureTracker(1000, 1000)
     for _ in range(8):
@@ -149,20 +140,17 @@ def test_drawing_with_foreshortened_index_never_erases():
     for i in range(400):
         r = 1.35 + 0.25 * np.sin(i / 5) + rng.uniform(-0.05, 0.05)   # oscila 1.1-1.6
         t.update(index_ratio(r))
-        assert t.mode != ERASE
-    for r in np.linspace(1.5, 0.95, 40):                            # cae gradualmente a medio doblar
-        t.update(index_ratio(r))
-        assert t.mode != ERASE
+        assert t.mode in (DRAW, IDLE)
 
 
-def test_real_fist_erases_within_350ms():
+def test_fist_with_touching_thumb_index_is_idle_and_never_pinches():
+    # Puño donde pulgar e índice se tocan: no es mano de dibujo ni pellizco
+    h = hand((0, 0, 0, 0), pinch=True)
+    assert classify(h) == IDLE
     t = GestureTracker(1000, 1000)
     for _ in range(8):
-        t.update(index_ratio(1.5))
-    frames = 0
-    while t.mode != ERASE and frames < 30:
-        t.update(hand((0, 0, 0, 0))); frames += 1
-    assert t.mode == ERASE and frames / 30 < 0.35
+        t.update(h)
+    assert t.mode == IDLE
 
 
 def pinch_hand(x=0.5, y=0.6, pinched=True, size=0.30):

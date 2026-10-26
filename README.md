@@ -53,9 +53,9 @@ Elige la herramienta y mueve el índice: el puntero se mueve sin pintar. **Toca 
 la del pulgar** para fijar el punto de partida; mientras mantengas el pellizco y muevas la mano verás
 la vista previa, y al soltar la figura queda dibujada. Sobre un botón, el pellizco sigue siendo un clic. Si pierdes la mano a mitad de figura, se descarta.
 
-### Borrar (mano completamente cerrada)
-Puño cerrado, pulgar incluido: borra solo bajo el puño. Con el índice solo o con dos dedos no borra.
-Para vaciar la pizarra usa el botón **Limpiar** (no hay gesto de mano para eso).
+### Borrar
+Usa la herramienta **Borrador** (fieltro de la bandeja) y dibuja con el índice como con el pincel.
+Para vaciar la pizarra usa el botón **Limpiar**. No hay gesto de mano para borrar.
 
 ### Dos manos
 - Con **un solo dedo (índice) en cada mano**, cada mano dibuja por su cuenta y con **su propio color**

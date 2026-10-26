@@ -35,7 +35,7 @@ def test_no_camera_error(monkeypatch):
         main.open_camera(0)
 
 
-def test_loop_draws_then_fist_does_not_clear_all(monkeypatch):
+def test_loop_draws_then_fist_does_nothing(monkeypatch):
     seen = {}
     real = main.App.step
 
@@ -54,11 +54,10 @@ def test_loop_draws_then_fist_does_not_clear_all(monkeypatch):
 
     fist = hand((0, 0, 0, 0))
     now = 100.0
+    n0 = int(app.canvas.mask.sum())
     for _ in range(12):                                # histéresis
         app.step(np.zeros((360, 640, 3), np.uint8), fist, now)
-    assert app.ui.mode == "BORRANDO" and app.canvas.mask.any()
-    app.step(np.zeros((360, 640, 3), np.uint8), fist, now + 0.9)
-    assert app.canvas.mask.any()                      # el puño borra localmente, no todo
+    assert app.ui.mode == "EN ESPERA" and int(app.canvas.mask.sum()) == n0   # el puño no borra ni pinta
 
 
 def two_hands(app, f, frames, tool, left=(1, 0, 0, 0), right=(1, 0, 0, 0), t0=0.0):
@@ -200,7 +199,7 @@ def test_undo_removes_last_stroke():
     assert not app.canvas.mask.any()
 
 
-def test_draw_fist_blip_draw_leaves_no_phantom_erase():
+def test_draw_fist_blip_draw_keeps_stroke():
     from test_core import index_ratio
     app = main.App(640, 360)
     f = np.zeros((360, 640, 3), np.uint8)
@@ -215,3 +214,5 @@ def test_draw_fist_blip_draw_leaves_no_phantom_erase():
         h = index_ratio(1.5); h[:, 0] += 0.3
         app.step(f, h, 2 + i / 30)
     assert app.ui.mode == "DIBUJANDO" and app.canvas.mask.sum() >= n0
+
+

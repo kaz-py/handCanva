@@ -10,7 +10,7 @@ sys.path[:0] = [ROOT, os.path.join(ROOT, "tests")]
 import synth  # noqa: E402
 from gestures import GestureTracker  # noqa: E402
 
-MODES = ["DRAW", "SELECT", "ERASE", "IDLE"]
+MODES = ["DRAW", "SELECT", "IDLE"]
 
 
 def run(n=150, noise=0.003, seed=0):
@@ -26,8 +26,8 @@ def run(n=150, noise=0.003, seed=0):
                 t.update(lm)
                 seen.add(t.mode)
             c[t.mode] += 1
-            bad = {"ERASE", "SELECT"} - {truth}
-            if (seen & bad) and truth != "ERASE" and truth != "SELECT":
+            bad = {"SELECT"} - {truth}
+            if (seen & bad) and truth != "SELECT":
                 flick[name] += 1
         conf[name] = c
     return conf, flick
@@ -40,7 +40,7 @@ def errors(conf):
         for m, k in c.items():
             tot += k
             if truth == "AMBIG":
-                e += k if m in ("ERASE", "SELECT") else 0
+                e += k if m == "SELECT" else 0
             elif m != truth:
                 e += k
     return e, tot
@@ -52,4 +52,4 @@ if __name__ == "__main__":
     for name, c in conf.items():
         print(f"{name:12s}{synth.POSES[name][2]:8s}" + "".join(f"{c[m]:8d}" for m in MODES))
     e, tot = errors(conf)
-    print(f"errores finales: {e}/{tot} ({100*e/tot:.1f}%)  | secuencias con ERASE/SELECT espurio (incl. transitorio): {dict(flick)}")
+    print(f"errores finales: {e}/{tot} ({100*e/tot:.1f}%)  | secuencias con SELECT espurio (incl. transitorio): {dict(flick)}")

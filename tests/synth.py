@@ -46,11 +46,11 @@ def place(model, rng, size, center, roll=0.0, pitch=0.0, yaw=0.0):
     return out
 
 
-# nombre -> (dedos, pulgar, verdad)  verdad: DRAW/SELECT/ERASE/IDLE/AMBIG
+# nombre -> (dedos, pulgar, verdad)  verdad: DRAW/SELECT/IDLE/AMBIG
 POSES = {
     "draw": (("ext", "curl", "curl", "curl"), None, "DRAW"),
     "select": (("ext", "ext", "curl", "curl"), None, "SELECT"),
-    "fist": (("curl",) * 4, "fold", "ERASE"),
+    "fist": (("curl",) * 4, "fold", "IDLE"),
     "open": (("ext",) * 4, "out", "IDLE"),
     "three": (("ext", "ext", "ext", "curl"), None, "IDLE"),
     "pinky": (("curl", "curl", "curl", "ext"), None, "IDLE"),

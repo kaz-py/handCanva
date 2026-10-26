@@ -10,7 +10,7 @@ import urllib.request
 
 import numpy as np
 
-DRAW, SELECT, ERASE, LINE, IDLE = "DRAW", "SELECT", "ERASE", "LINE", "IDLE"
+DRAW, SELECT, LINE, IDLE = "DRAW", "SELECT", "LINE", "IDLE"
 MODEL_URL = ("https://storage.googleapis.com/mediapipe-models/hand_landmarker/"
              "hand_landmarker/float16/1/hand_landmarker.task")
 MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "hand_landmarker.task")
@@ -29,12 +29,12 @@ def _d(lm, a, b):
 # ext in 0..1 = media de tres señales: ratio punta/PIP a la muñeca, ángulo en el PIP y alcance de la
 # punta relativo al tamaño de mano (muñeca-MCP medio). Extendido ~0.9, plegado ~0.1, curvado ~0.4-0.6.
 EXT_UP, EXT_STAY_UP, EXT_DOWN, EXT_STAY_DOWN = 0.65, 0.42, 0.36, 0.55   # histéresis: entrar exige más que mantener
-THUMB_FOLD, THUMB_OUT = 0.60, 0.45
-ENTER_EXTRA = {DRAW: 0, IDLE: 0, SELECT: 2, ERASE: 3}   # frames extra: BORRAR y SELECCIÓN son los más difíciles de activar
+THUMB_FOLD, THUMB_OUT = 0.52, 0.45
+ENTER_EXTRA = {DRAW: 0, IDLE: 0, SELECT: 2}   # frames extra: SELECCIÓN es la más difícil de activar
 COOLDOWN = 5        # frames (~150 ms) sin nuevos cambios tras un cambio de modo
-AMBIG_MAX = 10      # frames ambiguos seguidos tras los que SELECCIÓN/BORRAR se sueltan (seguridad); DIBUJO aguanta 3x
+AMBIG_MAX = 10      # frames ambiguos seguidos tras los que SELECCIÓN se suelta (seguridad); DIBUJO aguanta 3x
 EXT_ALPHA = 0.6     # suavizado de las características
-PINCH_ON, PINCH_OFF, PINCH_FRAMES = 0.30, 0.45, 2   # dist(punta índice, punta pulgar)/tamaño de palma, con histéresis
+PINCH_ON, PINCH_OFF, PINCH_FRAMES = 0.28, 0.38, 2   # dist(punta índice, punta pulgar)/tamaño de palma, con histéresis
 
 
 def _clip01(v):
@@ -59,16 +59,17 @@ def features(lm):
 
 
 def _decide(ext, fold, prev, pinch=False):
-    """Patrón de dedos -> DRAW/SELECT/ERASE/IDLE, o None si es ambiguo (el llamador conserva el modo)."""
+    """Patrón de dedos -> DRAW/SELECT/IDLE, o None si es ambiguo (el llamador conserva el modo)."""
     # índice+pulgar pellizcados con el resto plegado y el pulgar NO recogido en la palma (eso sería un puño) = mano de dibujo
-    if pinch and fold < THUMB_FOLD and all(v < EXT_STAY_DOWN for v in ext[1:]):
+    # exige que el índice esté al menos parcialmente extendido (no doblado en un puño/palma cerrada)
+    if pinch and fold < THUMB_FOLD and ext[0] >= EXT_DOWN and all(v < EXT_STAY_DOWN for v in ext[1:]):
         return DRAW
     up_idx = {DRAW: {0}, SELECT: {0, 1}}.get(prev, set())
     st = []
     for i, v in enumerate(ext):
         if i in up_idx:
             st.append("U" if v > EXT_STAY_UP else "D" if v < EXT_DOWN else "?")
-        elif prev in (DRAW, SELECT, ERASE):
+        elif prev in (DRAW, SELECT):
             st.append("D" if v < EXT_STAY_DOWN else "U" if v > EXT_UP + 0.1 else "?")
         else:
             st.append("U" if v > EXT_UP else "D" if v < EXT_DOWN else "?")
@@ -78,7 +79,7 @@ def _decide(ext, fold, prev, pinch=False):
     if pat == "UDDD":
         return DRAW
     if pat == "DDDD":
-        return ERASE if fold > THUMB_FOLD else IDLE if fold < THUMB_OUT else None
+        return IDLE                                # puño cerrado: sin acción
     return None if "?" in pat else IDLE
 
 
@@ -119,11 +120,11 @@ class GestureTracker:
     """Hasta 2 manos independientes, cada una con su modo estable.
 
     Por mano: evidencia suavizada -> candidato; entrar a un modo activo exige N frames seguidos de evidencia
-    fuerte (más para SELECCIÓN y BORRAR), salir exige evidencia contraria clara, lo ambiguo conserva el modo,
+    fuerte (más para SELECCIÓN), salir exige evidencia contraria clara, lo ambiguo conserva el modo,
     y hay un cooldown tras cada cambio. `mode/pointer/pinch/ratios` son los de la mano primaria (slot activo
     más bajo); `mode` global = el de mayor prioridad. `hands` = esqueletos suavizados en px por mano activa."""
 
-    PRIORITY = (ERASE, SELECT, DRAW, IDLE)
+    PRIORITY = (SELECT, DRAW, IDLE)
 
     def __init__(self, width: int, height: int, hysteresis: int = 4, alpha: float = 0.3, zone=FULL):
         self.w, self.h, self.n, self.alpha, self.zone = width, height, hysteresis, alpha, zone
@@ -171,10 +172,10 @@ class GestureTracker:
             s.cool -= 1
             s.cand, s.count = s.mode, 0
             return
-        if cand is None:                               # ambiguo: conservar, pero SELECCIÓN/BORRAR caducan
+        if cand is None:                               # ambiguo: conservar, pero SELECCIÓN caduca
             s.count, s.cand = 0, s.mode
             s.amb += 1
-            if s.mode != IDLE and s.amb >= (AMBIG_MAX if s.mode in (ERASE, SELECT) else 3 * AMBIG_MAX):
+            if s.mode != IDLE and s.amb >= (AMBIG_MAX if s.mode == SELECT else 3 * AMBIG_MAX):
                 s.mode, s.amb, s.cool = IDLE, 0, COOLDOWN
             return
         s.amb = 0
@@ -215,7 +216,7 @@ class GestureTracker:
             self._step_mode(s)
             # esqueleto en px con el MISMO mapeo y suavizado que el puntero: su punta del índice ES el puntero
             s.sk = self._smooth(s.sk, self._px(lm))
-            tgt = s.sk[[5, 9, 13, 17]].mean(axis=0) if s.mode == ERASE else s.sk[8]
+            tgt = s.sk[8]
             s.pointer = (int(round(tgt[0])), int(round(tgt[1])))   # round: int() sesga -0.5 px
         act = [s for s in self.slots if s.active]
         self.hands = [[(int(round(x)), int(round(y))) for x, y in s.sk] for s in act]

@@ -34,7 +34,7 @@ _MAGNET_ICON = {"tool:brush": "brush", "tool:line": "line", "tool:rect": "rect",
 
 @dataclass
 class UIState:
-    mode: str = "EN ESPERA"            # "DIBUJANDO" | "SELECCIÓN" | "BORRANDO" | "EN ESPERA"
+    mode: str = "EN ESPERA"            # "DIBUJANDO" | "SELECCIÓN" | "EN ESPERA"
     fps: float = 0.0
     pointer: tuple[int, int] | None = None   # punta del índice en px del frame
     hover_id: str | None = None        # botón bajo el puntero
@@ -734,11 +734,6 @@ class Overlay:
                 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                     art.stroke(color, [(c + dx * r(22), c + dy * r(22)), (c + dx * r(32), c + dy * r(32))], th + g, op)
                 art.circle(color, P, r(2) + g / 2, op=op)
-            elif mode == "BORRANDO":
-                q, k = r(20), r(9)
-                art.poly(color, [(c - q, c - q), (c + q, c - q), (c + q, c + q), (c - q, c + q)], th=th + g, op=op)
-                art.stroke(color, [(c - k, c - k), (c + k, c + k)], th + g, op)
-                art.stroke(color, [(c - k, c + k), (c + k, c - k)], th + g, op)
             else:
                 art.circle(color, P, r(12), th=th + g, op=op)
 
@@ -860,7 +855,6 @@ class Overlay:
         items = [
             ("Seleccionar", "Índice y medio arriba. Mueve el puntero sin dibujar.", "select"),
             ("Dibujar", "Pincel: solo el índice. Figuras: mueve el índice y toca el pulgar para dibujar; suelta para terminar.", "draw"),
-            ("Borrar", "Puño cerrado. Borra donde pasa la mano.", "erase"),
             ("Línea con dos manos", "Con la herramienta Línea: un dedo en cada mano mide la distancia.", "line"),
             ("Confirmar", "Mantén 1 s sobre un botón.", "dwell"),
             ("Dos manos, dos colores", "Un dedo en cada mano: cada una dibuja a la vez con su color.", "two"),
@@ -911,10 +905,6 @@ class Overlay:
             art.circle(T.COLORS["red"], (x0_ - 2.75 * u, y0_ - 0.65 * u), 0.5 * u)
             rx, ry = x0_ - 1.4 * u, y0_ - 3.5 * u
             art.stroke(T.COLORS["red"], [(rx, ry + 1.4 * u), (rx, ry), (rx + 2.6 * u, ry), (rx + 2.6 * u, ry + 1.0 * u)], max(2, 3 * sc))
-        elif kind == "erase":
-            _hand(art, cx, cy + ih * 0.30, u, set(), et)
-            for k, (dx, dy) in enumerate(((-2.8, 0.1), (-3.1, 0.9), (2.8, 0.2), (3.1, 1.0))):
-                art.stroke(T.MARKER_BODY, [(cx + dx * u - 0.4 * u, ty + dy * u), (cx + dx * u + 0.4 * u, ty + dy * u + 0.3 * u)], max(2, 3 * sc))
         elif kind == "line":
             uu = u * 0.5
             t1 = _hand(art, cx - 2.1 * u, ty + 0.9 * uu, uu, {"i"}, et)
@@ -958,19 +948,12 @@ class Overlay:
         np.copyto(frame, self._paper)
 
     def draw_hands(self, frame, hands, mode=None, colors=None, pinches=None) -> None:
-        """Esqueleto de cada mano: huesos de tinta con contorno claro, articulaciones, punta del índice en azul.
-        En BORRANDO (puño) se resalta el contorno de los nudillos."""
+        """Esqueleto de cada mano: huesos de tinta con contorno claro, articulaciones, punta del índice en azul."""
         th = self._bone_th
         for hi, lm in enumerate(hands):
             if len(lm) < 21:
                 continue
             P = np.asarray(lm, np.int32)
-            if mode == "BORRANDO":
-                hull = cv2.convexHull(P)
-                cv2.polylines(frame, [hull], True, T.PAPER_WHITE, th + 5, AA)
-                cv2.polylines(frame, [hull], True, T.ACCENT, th + 1, AA)
-                kn = P[[5, 9, 13, 17]]
-                cv2.polylines(frame, [kn], False, T.ACCENT, th + 1, AA)
             palm = P[_PALM]
             x0, y0 = np.maximum(palm.min(0) - 2, 0)
             x1, y1 = np.minimum(palm.max(0) + 3, [self.W, self.H])

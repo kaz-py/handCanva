@@ -56,7 +56,7 @@ ACTION_LABELS = {"thick:-": "Menos grosor", "thick:+": "Más grosor",
                  "action:undo": "Deshacer", "action:clear": "Limpiar"}
 
 # modo -> icono (el modo se distingue por icono y texto, no por color)
-MODES = {"DIBUJANDO": "brush", "SELECCIÓN": "cursor", "BORRANDO": "eraser", "EN ESPERA": "pause",
+MODES = {"DIBUJANDO": "brush", "SELECCIÓN": "cursor", "EN ESPERA": "pause",
          "DOS MANOS: LÍNEA": "line"}
 DEFAULT_MODE = "EN ESPERA"
 
